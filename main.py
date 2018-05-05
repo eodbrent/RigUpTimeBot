@@ -7,21 +7,21 @@ import tplink_smartplug
 Client = discord.Client()
 client = commands.Bot(command_prefix = "!")
 #live
-#channel = discord.Object(id='') #Your personalized discord channel ID.
-#BOT_TOKEN = ''
-
-#testing:
-channel = discord.Object(id='')
+channel = discord.Object(id='') #Your personalized discord channel ID.
 BOT_TOKEN = ''
-IP_ONE = '192.168.1.216'
-#IP_TWO = '192.168.1.171'
+
+IP_ONE = '192.168.1.100'
+#IP_TWO = '192.168.1.101'
 
 #Your pool must have an API - this is the base API address.
 URL = "http://xsg.pool.sexy/api2/accounts/"
 WALLET = "s1ZPk5Tij8NgkTknSAS9tks4CiTPtnwcTjp"
-API_ADDRESS = URL + WALLET # change to match your pool API address.
-NUM_WORKERS = 2 #Number of workers you should have up.
-
+API_ADDRESS = URL + WALLET # change the format to match your pool API address.
+#I only have two rigs, and only one freezes. So this is a simple check for me.
+#   If more than one rig is the problem.  A rig class could be created.  Injecting the worker name, or
+#    if you went the ping route, this would be easy as well.
+NUM_WORKERS = 2 
+ 
 async def api_check():
 
     await client.wait_until_ready()
@@ -32,7 +32,6 @@ async def api_check():
         workerStatus = getAPIdata()
         if workerStatus:
             await client.send_message(channel, "!!!!!!! WORKER DOWN !!!!!!!")
-            print("Attempting to turn off the plugin")
             if tplink_smartplug.validIP(IP_ONE):  #Validates the IP address / may not be needed if you trust your ip up top.
                 tplink_smartplug.setIP(IP_ONE)
                 tplink_smartplug.sendCmd(b"{\"system\":{\"set_relay_state\":{\"state\":0}}}") #turn off - state = 0
@@ -50,17 +49,14 @@ async def api_check():
             # if tplink_smartplug.validIP(IP_TWO):  #Validates the IP address
             #     tplink_smartplug.setIP(IP_TWO)
             #     tplink_smartplug.sendCmd(b"{\"system\":{\"set_relay_state\":{\"state\":1}}}") #turn on - state = 1
+            await client.send_message(channel, "Power cycled. Check back in 5 minutes...")
         print("api check performed")
         await asyncio.sleep(300)  #rest for 5 minutes. POOL API MAY NOT LIKE CHECKING MORE OFTEN.
-
-
 
 @client.event
 async def on_ready():
     print("Mine-BOT IS RUNNING!")
-    #
-    # start logging /primarily for adding new coins or exchanges
-    #   from requests !add
+
 @client.event
 async def on_message(message):
     msg = message.content.lower()
@@ -68,8 +64,9 @@ async def on_message(message):
         check = sysCheck()
         await client.send_message(channel, check)
     #Add further commands here "payments", etc
-def sysCheck():
 
+#returns worker data from pool
+def sysCheck():
     status = requests.get(API_ADDRESS)
     if status.status_code == 200:
         stats = status.json()
@@ -79,8 +76,8 @@ def sysCheck():
 
     return "Sorry fool, got nothing."
 
+#Pulls API data on your workers.  THIS WILL BE DIFFERENT BASED ON THE POOL.
 def getAPIdata():
-
     status = requests.get(API_ADDRESS)
     if status.status_code == 200:
         stats = status.json()
@@ -89,5 +86,5 @@ def getAPIdata():
         elif stats["workersOnline"] == NUM_WORKERS:
             return False
 
-client.loop.create_task(api_check())
+client.loop.create_task(api_check()) #makes the loop function run like a coroutine.
 client.run(BOT_TOKEN)
